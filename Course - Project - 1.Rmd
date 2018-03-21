@@ -1,0 +1,236 @@
+---
+title: "AK - Course Project -1"
+output: html_document
+---
+
+##Setting
+Let's make sure settings are correct we bore we proceed with the project.
+```{r setup, }
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Loading and preprocessing the data
+Let's load data file into R and see how first ten rows look like.
+
+```{r load,}
+mydata<-read.csv("activity.csv",header = TRUE,sep = ",")
+head(mydata,10)
+```
+
+
+##What is mean total number of steps taken per day?
+
+###Ignoring missing values, calculate the total number of steps taken per day.
+Let's see how first ten rows look like.
+```{r group}
+grouped_mydata<-aggregate(mydata$steps,by=list(date=mydata$date),FUN=sum,na.rm=TRUE)
+head(grouped_mydata,10)
+```
+##Make a histogram of the total number of steps taken each day
+
+Here is a histogram:
+```{r hist}
+hist(grouped_mydata$x)
+```
+
+##Calculate and report the mean and median of the total number of steps taken per day
+
+```{r mean,results='hide'}
+steps_mean<-(mean(grouped_mydata$x,na.rm = TRUE))
+steps_mean_round<- format (steps_mean,digits=5)
+```
+
+```{r median, results='hide'}
+steps_median<-(median(grouped_mydata$x, na.rm = TRUE))
+```
+Mean total number of steps taken per day is `r steps_mean_round`
+
+Median total number of steps taken per day is `r steps_median`
+
+
+##What is the average daily activity pattern?
+
+Let's re-group our original data file and see how top ten row look like:
+
+```{r re-group}
+grouped_mydata_time<-aggregate(mydata$steps,by=list(interval=mydata$interval),FUN= mean, na.rm=TRUE)
+head(grouped_mydata_time,10)
+```
+
+##Make a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+```{r plot}
+plot(grouped_mydata_time$interval,grouped_mydata_time$x)
+```
+
+##Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r max steps,results='hide'}
+grouped_mydata_time[which.max(grouped_mydata_time$x),]
+GMT<-grouped_mydata_time[which.max(grouped_mydata_time$x),]
+GMT_I<-GMT[1,1]
+GMT_x<-round(GMT[1,2],digits = 2)
+
+```
+Interval `r GMT_I` contains max number of steps - `r GMT_x`.
+
+
+##Inputing missing values
+
+##Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+
+```{r count NA, results='hide'}
+count_NA<-sum(is.na(mydata$steps))
+```
+Total number of rows with NAs is `r count_NA`.
+
+##Filling in all of the missing values in the dataset. 
+
+I'm agoing to use the mean for that 5-minute interval.
+
+Let's make sure data in the main data file is sorted first by date and then by interval.
+```{r check order1}
+neworder<-mydata[order(mydata[,2],mydata[,3]),]
+head(neworder,10)
+```
+Now, let's make sure that file contains totals by intervals is sorted by intervals.
+
+```{r check order2}
+neworder2<-grouped_mydata_time[order(grouped_mydata_time[,1],grouped_mydata_time[,2]),]
+head(neworder2)
+```
+
+Let's add a new column with daily average for each interval
+
+```{r  adding average}
+neworder2$average_steps<-round(neworder2$x/61,digits = 2)
+head(neworder2)
+```
+Let's merger these two correctly ordered files:
+```{r merger}
+merger_data<-merge(neworder,neworder2)
+head(merger_data)
+```
+Let's just check dimentions of the new merged file:
+```{r, check dim}
+dim(neworder)
+dim(neworder2)
+dim(merger_data)
+```
+Let's re-order these data my date and interval
+```{r reorder merger_data}
+neworder3<-merger_data[order(merger_data[,3],merger_data[,1]),]
+head(neworder3)
+```
+Finally, let's replace all NAs with data from Average_steps column. 
+
+So, the logic is if the data is not available for a particular date and particular interval, we will use two months average for this interval as approximation.
+
+```{r replace NAs}
+neworder3$steps[is.na(neworder3$steps)]<-neworder3$average_steps
+head(neworder3)
+```
+##Creating new data set
+
+Now, I will create a new dataset that is equal to the original dataset but with the missing data filled in. Let's take a look at first ten records:
+
+```{r new data set}
+new_data_set<-data.frame(neworder3$steps,neworder3$date,neworder3$interval)
+names(new_data_set)<-c("steps","date","interval")
+head(new_data_set,10)
+```
+
+##Calculating new numbers and making new histogram.
+
+Here is a histogram of the total number of steps taken each day.
+```{r group by date - no NA}
+grouped_new_data_set<-aggregate(new_data_set$steps,by=list(date=new_data_set$date),FUN=sum)
+head(grouped_new_data_set,10)
+```
+
+```{r hist - no NA}
+hist(grouped_new_data_set$x)
+```
+
+
+
+Here I re-calculate and report the mean and median total number of steps taken per day. 
+
+```{r mean  - no NAs}
+steps_mean_nona<-(mean(grouped_new_data_set$x))
+steps_mean_nona_round<- format (steps_mean_nona,digits=5)
+```
+
+```{r median - no NAs}
+steps_median_nona<-(median(grouped_new_data_set$x))
+steps_median_nona_round<- format (steps_median_nona,digits=5)
+```
+Mean total number of steps taken per day is `r steps_mean_nona_round` vs.`r steps_mean_round` before NAs were removed.
+
+Median total number of steps taken per day is `r steps_median_nona_round` vs. `r steps_median` before NAs were removed.
+
+
+
+
+
+##Are there differences in activity patterns between weekdays and weekends?
+I will creating a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+
+```{r add weekdays}
+new_data_set$weekdays<-weekdays(as.Date(new_data_set$date))
+head(new_data_set,10)
+```
+
+
+Instead of displaying days of the week, I want to see "Yes" and "No" in the column
+
+```{r adding yes and no}
+weekdays = c ("Monday","Tuesday", "Wednesday","Thursday","Friday", "Saturday", "Sunday")
+DN = c(1,2,3,4,5,6,7)
+Weeks=data.frame(weekdays,DN)
+head(Weeks)
+
+merger_day<-merge(new_data_set,Weeks)
+head(merger_day)
+
+merger_day<-merger_day[order(merger_day$date,merger_day$interval),]
+head(merger_day)
+```
+
+```{r assign yes or no}
+merger_day$Weekend<-ifelse(merger_day$DN > 5,"Weekend","Weekday")
+head(merger_day)
+```
+```{r}
+merger_day<-merger_day[c(2,3,4,6)]
+head(merger_day)
+```
+
+##Making a new plot
+First, let's break the 'weekend' file in two
+Weekend portion:
+```{r weekend portion}
+grouped_by_w<-subset(merger_day,merger_day$Weekend == "Weekend")
+head (grouped_by_w,10)
+```
+Weekday portion:
+```{r non-weekend portion}
+grouped_by_nw<-subset(merger_day,merger_day$Weekend == "Weekday")
+head (grouped_by_nw,10)
+```
+
+
+##Ploting graphs
+###Here is 'weekend' portion
+
+```{r plot weekend graphs,echo = FALSE}
+plot(grouped_by_w$interval,grouped_by_w$steps,type="l")
+```
+
+
+###Here is 'weekday' portion
+```{r plot weekend graphs2,echo = FALSE}
+plot(grouped_by_nw$interval,grouped_by_nw$steps,type="l")
+```
+
+###The End

@@ -223,13 +223,13 @@ head (grouped_by_nw,10)
 ##Ploting graphs
 ###Here is 'weekend' portion
 
-```{r plot weekend graphs,echo = FALSE}
+```{r plot weekend graphs,echo = TRUE}
 plot(grouped_by_w$interval,grouped_by_w$steps,type="l")
 ```
 
 
 ###Here is 'weekday' portion
-```{r plot weekend graphs2,echo = FALSE}
+```{r plot weekend graphs2,echo = TRUE}
 plot(grouped_by_nw$interval,grouped_by_nw$steps,type="l")
 ```
 
